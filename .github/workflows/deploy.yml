@@ -29,11 +29,18 @@ jobs:
           HASH=$(echo -n "${{ secrets.APP_PASSWORD }}" | sha256sum | awk '{print $1}')
           sed -i "s/PLACEHOLDER_HASH/$HASH/" wwwroot/appsettings.json
 
-      - name: Fix base href for GitHub Pages
-        run: sed -i 's|<base href="/" />|<base href="/eeprom-odometer-tool/" />|' wwwroot/index.html
-
       - name: Publish
         run: dotnet publish -c Release -o release
+
+      - name: Show publish output
+        run: find release -type f | sort
+
+      - name: Fix base href for GitHub Pages
+        run: |
+          FILE=$(find release -name "index.html" | head -1)
+          echo "Patching $FILE"
+          sed -i 's|<base href="/" />|<base href="/eeprom-odometer-tool/" />|' "$FILE"
+          grep "base href" "$FILE"
 
       - name: Add .nojekyll
         run: touch release/wwwroot/.nojekyll
