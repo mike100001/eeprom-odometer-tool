@@ -1,0 +1,36 @@
+@inject AuthService Auth
+
+<div class="login-overlay">
+    <div class="login-box card p-4">
+        <h2 class="mb-3">EEPROM Odometer Tool</h2>
+        <p class="text-muted">Enter password to continue.</p>
+        <input type="password"
+               class="form-control mb-2"
+               placeholder="Password"
+               @bind="password"
+               @bind:event="oninput"
+               @onkeydown="OnKeyDown" />
+        @if (error)
+        {
+            <p class="text-danger small mb-2">Incorrect password.</p>
+        }
+        <button class="btn btn-primary w-100" @onclick="Submit">Unlock</button>
+    </div>
+</div>
+
+@code {
+    private string password = "";
+    private bool error;
+
+    private async Task Submit()
+    {
+        error = !await Auth.TryLoginAsync(password);
+        password = "";
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await Submit();
+    }
+}

@@ -1,0 +1,136 @@
+@page "/"
+@inject IJSRuntime JS
+@using OdometerTool.Models
+@using OdometerTool.Services
+
+<PageTitle>EEPROM Odometer Tool</PageTitle>
+
+<h2>EEPROM Odometer Tool</h2>
+
+<div class="mb-3">
+    <label class="form-label">EEPROM Type</label>
+    <select class="form-select" @onchange="OnAlgorithmChanged">
+        @foreach (var algo in AlgorithmRegistry.All)
+        {
+            <option value="@algo.Id">@algo.Label</option>
+        }
+    </select>
+</div>
+
+<div class="mb-3">
+    <label class="form-label">EEPROM Binary File (.bin)</label>
+    <InputFile class="form-control" OnChange="OnFileUpload" accept=".bin" />
+</div>
+
+@if (errorMessage != null)
+{
+    <p class="text-danger">@errorMessage</p>
+}
+
+@if (currentValue.HasValue)
+{
+    <p>Current value: <strong>@currentValue.Value.ToString("N0")</strong></p>
+}
+
+<div class="mb-3">
+    <label class="form-label">Target Value</label>
+    <input type="number" class="form-control" @bind="targetValue" @bind:event="oninput" />
+</div>
+
+@if (nearestEncodable.HasValue && nearestEncodable != targetValue)
+{
+    <p class="text-warning">
+        Will display: <strong>@nearestEncodable.Value.ToString("N0")</strong>
+        (nearest encodable to @targetValue)
+    </p>
+}
+
+<button class="btn btn-primary" @onclick="DownloadFile" disabled="@(!CanDownload)">Download Modified File</button>
+
+<hr />
+
+<h2>KM to Miles Calculator</h2>
+
+<div class="row g-3">
+    <div class="col-auto">
+        <label class="form-label">KM</label>
+        <input type="number" class="form-control" @oninput="OnKmChanged" @bind="kmValue" placeholder="KM" />
+    </div>
+    <div class="col-auto">
+        <label class="form-label">Miles</label>
+        <input type="number" class="form-control" @oninput="OnMilesChanged" @bind="milesValue" placeholder="Miles" />
+    </div>
+</div>
+
+@code {
+    private EepromAlgorithm selectedAlgorithm = AlgorithmRegistry.All[0];
+    private byte[]? fileData;
+    private string? fileName;
+    private int? currentValue;
+    private int targetValue;
+    private int? nearestEncodable;
+    private string? errorMessage;
+    private bool CanDownload => fileData != null && currentValue.HasValue && targetValue > 0;
+
+    private double kmValue;
+    private double milesValue;
+    private const double KmToMiles = 0.621371;
+
+    private void OnKmChanged(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), out double km))
+            milesValue = Math.Round(km * KmToMiles);
+    }
+
+    private void OnMilesChanged(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), out double miles))
+            kmValue = Math.Round(miles / KmToMiles);
+    }
+
+    private void OnAlgorithmChanged(ChangeEventArgs e)
+    {
+        selectedAlgorithm = AlgorithmRegistry.All.First(a => a.Id == e.Value?.ToString());
+        fileData = null;
+        currentValue = null;
+        errorMessage = null;
+    }
+
+    private async Task OnFileUpload(InputFileChangeEventArgs e)
+    {
+        errorMessage = null;
+        currentValue = null;
+        var file = e.File;
+
+        if (file.Size != selectedAlgorithm.ExpectedFileSize)
+        {
+            errorMessage = $"Expected {selectedAlgorithm.ExpectedFileSize} bytes for {selectedAlgorithm.Label}, got {file.Size} bytes.";
+            return;
+        }
+
+        using var stream = file.OpenReadStream();
+        fileData = new byte[file.Size];
+        await stream.ReadAsync(fileData);
+        fileName = file.Name;
+
+        try
+        {
+            currentValue = selectedAlgorithm.ReadOdometer(fileData);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            fileData = null;
+        }
+    }
+
+    private async Task DownloadFile()
+    {
+        if (fileData == null) return;
+
+        byte[] modified = selectedAlgorithm.WriteOdometer(fileData, targetValue);
+        string outputName = Path.GetFileNameWithoutExtension(fileName) + "_modified.bin";
+
+        await JS.InvokeVoidAsync("downloadFile", outputName, modified);
+    }
+}
