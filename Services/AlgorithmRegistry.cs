@@ -9,5 +9,6 @@ public static class AlgorithmRegistry
     {
         new HondaAccordYNS93C76(),
         new HondaYNS93C86(),
+        new HondaYNS93C86BCD(),
     };
 }
