@@ -8,7 +8,7 @@ public class HondaYNS93C86BCD : EepromAlgorithm
     public override string Label => "Honda YNS 93C86 (BCD)";
     public override int ExpectedFileSize => 2048;
 
-    private const int PatternOffset = 0x063;
+    private const int PatternOffset = 0x062;
     private const int PatternSize   = 3;
     private const int PatternStride = 4;   // every 4 bytes
     private const int PatternCount  = 3;   // 3 copies
