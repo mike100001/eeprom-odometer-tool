@@ -5,7 +5,7 @@ namespace OdometerTool.Algorithms;
 public class HondaYNS93C86 : EepromAlgorithm
 {
     public override string Id    => "honda-yns-93c86";
-    public override string Label => "Honda YNS 93C86";
+    public override string Label => "Honda S660 93C86";
     public override int ExpectedFileSize => 2048;
 
     private const int PatternOffset = 0x1D8;

@@ -5,7 +5,7 @@ namespace OdometerTool.Algorithms;
 public class HondaAccordYNS93C76 : EepromAlgorithm
 {
     public override string Id    => "honda-accord-yns-93c76";
-    public override string Label => "Honda Accord YNS 93C76";
+    public override string Label => "Honda Accord CRZ/RK5 93C76";
     public override int ExpectedFileSize => 1024;
 
     private const int PatternOffset = 0x1D8;
