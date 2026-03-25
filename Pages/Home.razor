@@ -129,7 +129,7 @@
         if (fileData == null) return;
 
         byte[] modified = selectedAlgorithm.WriteOdometer(fileData, targetValue);
-        string outputName = Path.GetFileNameWithoutExtension(fileName) + "_modified.bin";
+        string outputName = Path.GetFileNameWithoutExtension(fileName) + $"_{targetValue}mi_modified.bin";
 
         await JS.InvokeVoidAsync("downloadFile", outputName, modified);
     }
