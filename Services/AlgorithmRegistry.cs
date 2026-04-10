@@ -8,6 +8,7 @@ public static class AlgorithmRegistry
     public static readonly List<EepromAlgorithm> All = new()
     {
         new HondaAccordYNS93C76(),
+        new HondaCivicFD293C76(),
         new HondaYNS93C86(),
         new HondaYNS93C86BCD(),
     };
