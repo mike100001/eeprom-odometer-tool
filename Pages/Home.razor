@@ -88,18 +88,25 @@
             kmValue = Math.Round(miles / KmToMiles);
     }
 
+    private void ResetState()
+    {
+        fileData = null;
+        fileName = null;
+        currentValue = null;
+        targetValue = 0;
+        nearestEncodable = null;
+        errorMessage = null;
+    }
+
     private void OnAlgorithmChanged(ChangeEventArgs e)
     {
         selectedAlgorithm = AlgorithmRegistry.All.First(a => a.Id == e.Value?.ToString());
-        fileData = null;
-        currentValue = null;
-        errorMessage = null;
+        ResetState();
     }
 
     private async Task OnFileUpload(InputFileChangeEventArgs e)
     {
-        errorMessage = null;
-        currentValue = null;
+        ResetState();
         var file = e.File;
 
         if (file.Size != selectedAlgorithm.ExpectedFileSize)
