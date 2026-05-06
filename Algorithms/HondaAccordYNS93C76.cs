@@ -8,21 +8,36 @@ public class HondaAccordYNS93C76 : EepromAlgorithm
     public override string Label => "Honda Accord CRZ/RK5 93C76";
     public override int ExpectedFileSize => 1024;
 
-    private const int PatternOffset = 0x1D8;
-    private const int PatternSize   = 4;
-    private const int Divisor       = 32;
+    private const int BufferOffset = 0x1D8;
+    private const int EntryCount   = 16;
+    private const int EntrySize    = 4;
+    private const int Divisor      = 32;
 
     public override int ReadOdometer(byte[] data)
     {
-        byte lo  = data[PatternOffset];
-        byte hi  = data[PatternOffset + 1];
-        byte nlo = data[PatternOffset + 2];
-        byte nhi = data[PatternOffset + 3];
+        int maxValue = -1;
 
-        VerifyChecksum(lo, hi, nlo, nhi, PatternOffset);
+        for (int i = 0; i < EntryCount; i++)
+        {
+            int off = BufferOffset + i * EntrySize;
+            byte lo  = data[off];
+            byte hi  = data[off + 1];
+            byte nlo = data[off + 2];
+            byte nhi = data[off + 3];
 
-        int stored = lo | (hi << 8);
-        return stored * Divisor;
+            if ((lo ^ nlo) != 0xFF || (hi ^ nhi) != 0xFF)
+                continue;
+
+            int miles = (lo | (hi << 8)) * Divisor;
+            if (miles > maxValue)
+                maxValue = miles;
+        }
+
+        if (maxValue < 0)
+            throw new InvalidDataException(
+                "No valid odometer entries found — check you selected the correct EEPROM type.");
+
+        return maxValue;
     }
 
     public override byte[] WriteOdometer(byte[] data, int targetValue)
@@ -33,25 +48,15 @@ public class HondaAccordYNS93C76 : EepromAlgorithm
         byte nlo = (byte)(~lo & 0xFF);
         byte nhi = (byte)(~hi & 0xFF);
 
-        byte oldLo  = data[PatternOffset];
-        byte oldHi  = data[PatternOffset + 1];
-        byte oldNlo = data[PatternOffset + 2];
-        byte oldNhi = data[PatternOffset + 3];
-
         byte[] result = (byte[])data.Clone();
 
-        for (int i = 0; i <= result.Length - PatternSize; i++)
+        for (int i = 0; i < EntryCount; i++)
         {
-            if (result[i]     == oldLo  &&
-                result[i + 1] == oldHi  &&
-                result[i + 2] == oldNlo &&
-                result[i + 3] == oldNhi)
-            {
-                result[i]     = lo;
-                result[i + 1] = hi;
-                result[i + 2] = nlo;
-                result[i + 3] = nhi;
-            }
+            int off = BufferOffset + i * EntrySize;
+            result[off]     = lo;
+            result[off + 1] = hi;
+            result[off + 2] = nlo;
+            result[off + 3] = nhi;
         }
 
         return result;
