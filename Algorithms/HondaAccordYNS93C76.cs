@@ -2,10 +2,10 @@ using OdometerTool.Models;
 
 namespace OdometerTool.Algorithms;
 
-public class HondaAccordYNS93C76 : EepromAlgorithm
+public class HondaYNS93C76 : EepromAlgorithm
 {
-    public override string Id    => "honda-accord-yns-93c76";
-    public override string Label => "Honda Accord CRZ/RK5 93C76";
+    public override string Id    => "honda-yns-93c76";
+    public override string Label => "Honda CRZ/RK5 93C76";
     public override int ExpectedFileSize => 1024;
 
     private const int BufferOffset = 0x1D8;
