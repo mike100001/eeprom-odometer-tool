@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("OdometerTool")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fadf762f8a64123ab109fd3f869d53bb6ee56003")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6b84e6190c6cfad90d2d284a8021934aa01cda46")]
 [assembly: System.Reflection.AssemblyProductAttribute("OdometerTool")]
 [assembly: System.Reflection.AssemblyTitleAttribute("OdometerTool")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
