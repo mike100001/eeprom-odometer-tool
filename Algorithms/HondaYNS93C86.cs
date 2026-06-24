@@ -8,54 +8,66 @@ public class HondaYNS93C86 : EepromAlgorithm
     public override string Label => "Honda S660 93C86";
     public override int ExpectedFileSize => 2048;
 
-    private const int PatternOffset = 0x1D8;
-    private const int PatternSize   = 4;
-    private const int Divisor       = 32;
+    private const int RegionOffset = 0x1D8;
+    private const int SlotCount    = 16;      // 16 × 4-byte slots = 64 bytes
+    private const int SlotSize     = 4;
+    private const int Divisor      = 32;
 
     public override int ReadOdometer(byte[] data)
     {
-        byte lo  = data[PatternOffset];
-        byte hi  = data[PatternOffset + 1];
-        byte nlo = data[PatternOffset + 2];
-        byte nhi = data[PatternOffset + 3];
+        // The region is a ring buffer. The ECU writes successive increments
+        // into consecutive slots, so the CURRENT value is the maximum valid
+        // slot (complement check must pass).
+        int maxStored = -1;
 
-        VerifyChecksum(lo, hi, nlo, nhi, PatternOffset);
+        for (int i = 0; i < SlotCount; i++)
+        {
+            int pos  = RegionOffset + i * SlotSize;
+            byte lo  = data[pos];
+            byte hi  = data[pos + 1];
+            byte nlo = data[pos + 2];
+            byte nhi = data[pos + 3];
 
-        int stored = lo | (hi << 8);
-        return stored * Divisor;
+            if (nlo != (byte)(~lo) || nhi != (byte)(~hi))
+                continue; // corrupt / erased slot — skip
+
+            int stored = lo | (hi << 8);
+            if (stored > maxStored)
+                maxStored = stored;
+        }
+
+        if (maxStored < 0)
+            throw new InvalidDataException("No valid odometer slot found in region.");
+
+        return maxStored * Divisor;
     }
 
     public override byte[] WriteOdometer(byte[] data, int targetValue)
     {
-        int stored = targetValue / Divisor;
-        byte lo  = (byte)(stored & 0xFF);
-        byte hi  = (byte)((stored >> 8) & 0xFF);
-        byte nlo = (byte)(~lo & 0xFF);
-        byte nhi = (byte)(~hi & 0xFF);
-
-        byte oldLo  = data[PatternOffset];
-        byte oldHi  = data[PatternOffset + 1];
-        byte oldNlo = data[PatternOffset + 2];
-        byte oldNhi = data[PatternOffset + 3];
+        // Round UP to nearest encodable multiple (matches OEM tool behaviour).
+        int stored = (targetValue + Divisor - 1) / Divisor;
+        byte lo    = (byte)(stored & 0xFF);
+        byte hi    = (byte)((stored >> 8) & 0xFF);
+        byte nlo   = (byte)(~lo);
+        byte nhi   = (byte)(~hi);
 
         byte[] result = (byte[])data.Clone();
 
-        for (int i = 0; i <= result.Length - PatternSize; i++)
+        // Overwrite ALL 16 slots unconditionally — don't rely on a pattern
+        // match, because worn/bit-flipped slots won't match and would be
+        // left with stale values.
+        for (int i = 0; i < SlotCount; i++)
         {
-            if (result[i]     == oldLo  &&
-                result[i + 1] == oldHi  &&
-                result[i + 2] == oldNlo &&
-                result[i + 3] == oldNhi)
-            {
-                result[i]     = lo;
-                result[i + 1] = hi;
-                result[i + 2] = nlo;
-                result[i + 3] = nhi;
-            }
+            int pos       = RegionOffset + i * SlotSize;
+            result[pos]   = lo;
+            result[pos+1] = hi;
+            result[pos+2] = nlo;
+            result[pos+3] = nhi;
         }
 
         return result;
     }
 
-    public int NearestEncodable(int targetValue) => (targetValue / Divisor) * Divisor;
+    public int NearestEncodable(int targetValue) =>
+        ((targetValue + Divisor - 1) / Divisor) * Divisor; // rounds UP, consistent with Write
 }
