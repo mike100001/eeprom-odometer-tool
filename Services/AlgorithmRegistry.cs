@@ -11,5 +11,6 @@ public static class AlgorithmRegistry
         new HondaCivicFD293C76(),
         new HondaYNS93C86(),
         new HondaYNS93C86BCD(),
+        new HondaSubaru93C56(),
     };
 }
