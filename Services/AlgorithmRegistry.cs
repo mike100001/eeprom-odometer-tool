@@ -14,5 +14,6 @@ public static class AlgorithmRegistry
         new HondaSubaru93C56(),
         new Subaru93C76(),
         new Toyota93C66(),
+        new HondaToyota93C46(),
     };
 }
