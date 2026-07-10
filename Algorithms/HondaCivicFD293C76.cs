@@ -1,20 +1,3 @@
-alphgsc66_00.binbinalphgsc66.binbinToyota 93c66 94k kms and 58kRan 7 commandsRan 7 commandsGood — 17 slots (0–16), wrap confirmed. Now I have everything needed.Created a file, read a fileCreated a file, read a fileThis one has two meaningful differences from the Subaru chips worth flagging for your C# implementation:
-No complement bytes — entries are just 2 bytes [A, B], so there's nothing to validate. The read logic relies solely on detecting FF FF and the wrap point.
-Wrap detection is inverted — on the 93C56/93C76 you take the last valid entry at the highest address. On this Toyota chip, after a wrap the newest entries are at the lowest address, so you take firstValue from slot 0 rather than scanning to the end.
-The ×16 multiplier and formula are otherwise identical across all three chips, so the core calculation is the same — just parameterise OdoBase, EntrySize, SlotCount, and the wrap detection strategy.93c66 toyota odometer algorithmDocument · MD silverdc5_00.binbinsilverdc5.binbinHonda/Toyota 93C46 88900 kms and 55,100Ran 15 commandsRan 15 commandsFormula cracked. Clean and consistent — both reference entries verify exactly. Here's what we found:
-
-93C46 Honda/Toyota — Structure
-PropertyValueEEPROM size128 bytesODO region0x008–0x013Entry size4 bytes [b0, b1, b2, 0xFF]Slot count3 redundant copies (no rolling counter)Blank markerFF FF FF FF
-No rolling counter — all 3 slots always hold the same value. It's a 3× redundancy write for integrity, not a sequential log.
-Formula
-Completely different from the previous chips — this is a 24-bit down-counter with a fractional scale factor:
-odo_km = (0xFFF9B5 - LE24(b0, b1, b2)) × 17 / 107
-Inverse (for writing):
-LE24 = round(0xFFF9B5 - odo_km × 107 / 17)
-EntryDecodedFA 6F F7 FF88,900 kmFF AE FA FF55,100 km
-The scale factor 107/17 ≈ 6.294 is likely pulse-derived from the specific tyre/VSS calibration baked into that cluster firmware. 0xFFF9B5 is the firmware constant representing the zero-km starting value.
-Want me to write the .md now?Yes pleaseCreated a file, read a fileCreated a file, read a fileThe comparison table at the bottom now covers all four chip variants side by side — the 93C46 stands out clearly from the others with its down-counter encoding, fractional scale factor, and 3× redundancy write pattern. The spot-check table for 50k, 100k, and 0 km should be useful for testing your C# implementation against known expected byte sequences.93c46 honda toyota odometer algorithmDocument · MD ericfd2_NEW_77409.binbinericfd2.binbinNeed to work out this 93c76 odo for a Honda Civic. The two files attached are 48,000 and 77,400 but the algo we have in our app shows 44kusing OdometerTool.Models;
-
 namespace OdometerTool.Algorithms;
 
 /// <summary>
