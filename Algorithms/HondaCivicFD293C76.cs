@@ -1,3 +1,5 @@
+using OdometerTool.Models;
+
 namespace OdometerTool.Algorithms;
 
 /// <summary>
