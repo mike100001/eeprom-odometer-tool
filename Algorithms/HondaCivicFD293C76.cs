@@ -2,14 +2,6 @@ using OdometerTool.Models;
 
 namespace OdometerTool.Algorithms;
 
-/// <summary>
-/// Honda Civic FD2 — 93C76 EEPROM odometer algorithm.
-/// Region 0x0180–0x01BF: 16 × 4-byte wear-levelling slots.
-/// Slot format: [ lo, hi, ~lo, ~hi ]
-/// Formula: km = (588 × counter + CarConstant) / 19
-/// CarConstant is cluster-specific; this variant = 15471.
-/// Derive per cluster: CarConstant = known_km * 19 - 588 * known_counter
-/// </summary>
 public class HondaCivicFD293C76 : EepromAlgorithm
 {
     public override string Id    => "honda-civic-fd2-93c76";
@@ -22,8 +14,6 @@ public class HondaCivicFD293C76 : EepromAlgorithm
     private const int Numerator   = 588;
     private const int Denominator = 19;
 
-    // Cluster-specific constant. Derive from a known reading:
-    // CarConstant = known_km * 19 - 588 * known_counter
     public int CarConstant { get; set; } = 15471;
 
     public override int ReadOdometer(byte[] data)
@@ -39,7 +29,7 @@ public class HondaCivicFD293C76 : EepromAlgorithm
             byte nhi    = data[offset + 3];
 
             if ((lo ^ nlo) != 0xFF || (hi ^ nhi) != 0xFF)
-                continue; // invalid/transitional slot — skip
+                continue; 
 
             int counter = (hi << 8) | lo;
             if (counter > maxCounter)
