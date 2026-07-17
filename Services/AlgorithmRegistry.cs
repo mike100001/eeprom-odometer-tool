@@ -15,5 +15,6 @@ public static class AlgorithmRegistry
         new Subaru93C76(),
         new Toyota93C66(),
         new HondaToyota93C46(),
+        new Nissan93C56(),
     };
 }
