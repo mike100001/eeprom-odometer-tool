@@ -16,7 +16,7 @@ namespace OdometerTool.Algorithms;
 public class Nissan93C56 : EepromAlgorithm
 {
     public override string Id    => "nissan-93c56";
-    public override string Label => "Nissan 93C56";
+    public override string Label => "Nissan Yazaki 93C56";
     public override int ExpectedFileSize => 256;
 
     private const int OdoBase  = 0x068;
