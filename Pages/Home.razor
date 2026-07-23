@@ -3,12 +3,12 @@
 @using OdometerTool.Models
 @using OdometerTool.Services
 
-<PageTitle>Torque GT Japanese EEPROM Odometer Tool</PageTitle>
+<PageTitle>Torque GT Japanese EEPROM Odometer Calculator</PageTitle>
 
-<h2>Torque GT Japanese EEPROM Odometer Tool</h2>
+<h2>Torque GT Japanese EEPROM Odometer Calculator</h2>
 
 <div class="mb-3">
-    <label class="form-label">EEPROM Type</label>
+    <label class="form-label">EEPROM File Type</label>
     <select class="form-select" @onchange="OnAlgorithmChanged">
         @foreach (var algo in AlgorithmRegistry.All)
         {
