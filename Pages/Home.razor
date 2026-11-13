@@ -49,6 +49,36 @@
 
 <hr />
 
+<h2>Software KM / Miles Change</h2>
+
+<div class="mb-3">
+    <label class="form-label">EEPROM File Type</label>
+    <select class="form-select" @onchange="OnUnitAlgorithmChanged">
+        @foreach (var algo in AlgorithmRegistry.UnitConversions)
+        {
+            <option value="@algo.Id">@algo.Label</option>
+        }
+    </select>
+</div>
+
+<div class="mb-3">
+    <label class="form-label">EEPROM Binary File (.bin)</label>
+    <InputFile class="form-control" OnChange="OnUnitFileUpload" accept=".bin" />
+</div>
+
+@if (unitErrorMessage != null)
+{
+    <p class="text-danger">@unitErrorMessage</p>
+}
+
+@if (currentUnit.HasValue)
+{
+    <p>Current software: <strong>@UnitName(currentUnit.Value)</strong></p>
+    <button class="btn btn-primary" @onclick="DownloadUnitFile">Convert to @UnitName(OtherUnit) &amp; Download</button>
+}
+
+<hr />
+
 <h2>KM to Miles Calculator</h2>
 
 <div class="row g-3">
@@ -137,6 +167,66 @@
 
         byte[] modified = selectedAlgorithm.WriteOdometer(fileData, targetValue);
         string outputName = Path.GetFileNameWithoutExtension(fileName) + $"_{targetValue}mi_modified.bin";
+
+        await JS.InvokeVoidAsync("downloadFile", outputName, modified);
+    }
+
+    private UnitConversionAlgorithm selectedUnitAlgorithm = AlgorithmRegistry.UnitConversions[0];
+    private byte[]? unitFileData;
+    private string? unitFileName;
+    private DisplayUnit? currentUnit;
+    private string? unitErrorMessage;
+    private DisplayUnit OtherUnit => currentUnit == DisplayUnit.Km ? DisplayUnit.Miles : DisplayUnit.Km;
+
+    private static string UnitName(DisplayUnit unit) => unit == DisplayUnit.Km ? "KM" : "Miles";
+
+    private void ResetUnitState()
+    {
+        unitFileData = null;
+        unitFileName = null;
+        currentUnit = null;
+        unitErrorMessage = null;
+    }
+
+    private void OnUnitAlgorithmChanged(ChangeEventArgs e)
+    {
+        selectedUnitAlgorithm = AlgorithmRegistry.UnitConversions.First(a => a.Id == e.Value?.ToString());
+        ResetUnitState();
+    }
+
+    private async Task OnUnitFileUpload(InputFileChangeEventArgs e)
+    {
+        ResetUnitState();
+        var file = e.File;
+
+        if (file.Size != selectedUnitAlgorithm.ExpectedFileSize)
+        {
+            unitErrorMessage = $"Expected {selectedUnitAlgorithm.ExpectedFileSize} bytes for {selectedUnitAlgorithm.Label}, got {file.Size} bytes.";
+            return;
+        }
+
+        using var stream = file.OpenReadStream();
+        unitFileData = new byte[file.Size];
+        await stream.ReadAsync(unitFileData);
+        unitFileName = file.Name;
+
+        try
+        {
+            currentUnit = selectedUnitAlgorithm.ReadUnit(unitFileData);
+        }
+        catch (Exception ex)
+        {
+            unitErrorMessage = ex.Message;
+            unitFileData = null;
+        }
+    }
+
+    private async Task DownloadUnitFile()
+    {
+        if (unitFileData == null) return;
+
+        byte[] modified = selectedUnitAlgorithm.WriteUnit(unitFileData, OtherUnit);
+        string outputName = Path.GetFileNameWithoutExtension(unitFileName) + $"_{UnitName(OtherUnit).ToLower()}.bin";
 
         await JS.InvokeVoidAsync("downloadFile", outputName, modified);
     }

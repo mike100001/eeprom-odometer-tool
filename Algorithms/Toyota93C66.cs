@@ -3,11 +3,13 @@ using OdometerTool.Models;
 namespace OdometerTool.Algorithms;
 
 /// <summary>
-/// Toyota 93C66 EEPROM odometer algorithm.
-/// Region 0x000–0x021: 17 × 2-byte rolling slots, no complement check.
-/// Slot format: [ A, B ] — counter = A | (B &lt;&lt; 8), odometer_km = counter × 16.
-/// Unused slots contain FF FF. Wrap detection: the value at the lowest address
-/// is always current — post-wrap, the cluster overwrites from slot 0 upward.
+/// Toyota 93C66 EEPROM odometer algorithm (verified against Vellfire dumps).
+/// Region 0x000–0x021: 17 × 2-byte little-endian slots, no complement check.
+/// The cluster increments one slot per unit in round-robin (wear levelling),
+/// so the odometer is the SUM of all 17 slots, at 1 km/mile resolution.
+///   e.g. 6 × 0x14DB + 11 × 0x14DA = 90,752 km
+///        17 × 0x0CF5              = 56,389 miles
+/// Slots therefore never differ by more than 1, and the higher ones come first.
 /// </summary>
 public class Toyota93C66 : EepromAlgorithm
 {
@@ -18,53 +20,51 @@ public class Toyota93C66 : EepromAlgorithm
     private const int OdoBase   = 0x000;
     private const int SlotCount = 17;
     private const int EntrySize = 2;
-    private const int Divisor   = 16;
 
     public override int ReadOdometer(byte[] data)
     {
-        // Scan forward; stop at the first FF FF (unused tail).
-        // The value at the lowest address is always current:
-        //   - No wrap  → all written slots share the same value.
-        //   - Wrap     → the cluster overwrote from slot 0 with the new counter.
-        ushort? firstValue = null;
+        int sum = 0;
+        int min = int.MaxValue;
+        int max = int.MinValue;
 
         for (int i = 0; i < SlotCount; i++)
         {
             int off = OdoBase + i * EntrySize;
-            byte a  = data[off];
-            byte b  = data[off + 1];
+            int val = data[off] | (data[off + 1] << 8);
 
-            if (a == 0xFF && b == 0xFF)
-                break;
+            if (val == 0xFFFF)
+                throw new InvalidDataException(
+                    $"Erased odometer slot at 0x{off:X3} — check you selected the correct EEPROM type.");
 
-            ushort val = (ushort)(a | (b << 8));
-            firstValue ??= val;
+            sum += val;
+            min = Math.Min(min, val);
+            max = Math.Max(max, val);
         }
 
-        if (firstValue == null)
+        if (max - min > 1)
             throw new InvalidDataException(
-                "No valid odometer entries found — check you selected the correct EEPROM type.");
+                "Odometer slots differ by more than 1 — check you selected the correct EEPROM type.");
 
-        return firstValue.Value * Divisor;
+        return sum;
     }
 
     public override byte[] WriteOdometer(byte[] data, int targetValue)
     {
-        ushort counter = (ushort)(targetValue / Divisor);
-        byte lo = (byte)(counter & 0xFF);
-        byte hi = (byte)((counter >> 8) & 0xFF);
+        // Spread the total across the slots: the first (target % 17) slots
+        // get one extra, matching how the cluster itself increments them.
+        int baseValue = targetValue / SlotCount;
+        int remainder = targetValue % SlotCount;
 
         byte[] result = (byte[])data.Clone();
 
         for (int i = 0; i < SlotCount; i++)
         {
+            int val         = baseValue + (i < remainder ? 1 : 0);
             int off         = OdoBase + i * EntrySize;
-            result[off]     = lo;
-            result[off + 1] = hi;
+            result[off]     = (byte)(val & 0xFF);
+            result[off + 1] = (byte)((val >> 8) & 0xFF);
         }
 
         return result;
     }
-
-    public int NearestEncodable(int targetValue) => (targetValue / Divisor) * Divisor;
 }

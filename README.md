@@ -22,6 +22,17 @@ Upload a `.bin` EEPROM dump, pick the matching cluster/algorithm, read the curre
 
 New clusters are added as classes in `Algorithms/`, extending `Models/EepromAlgorithm.cs`, and registered in `Services/AlgorithmRegistry.cs`.
 
+## Software KM / Miles change
+
+Separate from the odometer algorithms: flips the config bits that switch the cluster's software between KM and Miles (no odometer maths — the bytes are taken from before/after dumps). Detects the current unit and converts either way.
+
+| Cluster | Chip | File size | Bytes changed |
+|---|---|---|---|
+| Honda Civic FD2 | 93C76 | 1024 bytes | `0x017` |
+| Mitsubishi Delica | 93C86 | 2048 bytes | `0x5DD`, `0x5DF` |
+
+New ones extend `Models/UnitConversionAlgorithm.cs` and go in `AlgorithmRegistry.UnitConversions`.
+
 ## Access
 
 The app is protected by a client-side password gate (SHA-256 checked, session-persisted). The password is injected at build time via a GitHub Actions secret and is not stored in the repo.

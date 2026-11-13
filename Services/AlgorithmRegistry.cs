@@ -17,4 +17,10 @@ public static class AlgorithmRegistry
         new HondaToyota93C46(),
         new Nissan93C56(),
     };
+
+    public static readonly List<UnitConversionAlgorithm> UnitConversions = new()
+    {
+        new HondaCivicFD2Units93C76(),
+        new MitsubishiDelica93C86Units(),
+    };
 }
